@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """A simple script that lets you log into your Plex account and select a playlist to upgrade.
 
@@ -37,7 +36,6 @@ import os
 import random
 import re
 import sys
-
 from getpass import getpass
 
 from plexapi import PlexConfig
@@ -47,7 +45,6 @@ from plexapi.myplex import MyPlexAccount, MyPlexResource
 from plexapi.playlist import Playlist
 from plexapi.server import PlexServer
 from plexapi.utils import choose
-
 
 __author__ = "Michael Pölzl"
 __copyright__ = "Copyright 2023, Michael Pölzl"
@@ -135,7 +132,9 @@ def choose_simple_replacement_mode() -> bool:
     print()
 
     while True:
-        simple_mode = input("Do you want to enable the simple replacement mode (The best version available will automatically be selected)? [yN]")
+        simple_mode = input(
+            "Do you want to enable the simple replacement mode (The best version available will automatically be selected)? [yN]",
+        )
 
         if simple_mode.lower() == "y":
             return True
@@ -156,9 +155,12 @@ def check_quality_requirements(item: Audio) -> bool:
     """
 
     return not (
-        item.media[0].audioCodec == "mp3" and item.media[0].bitrate < 320 or 
-        item.media[0].audioCodec == "aac" and item.media[0].bitrate < 320 or 
-        item.media[0].audioCodec == "m4a" and item.media[0].bitrate < 256
+        item.media[0].audioCodec == "mp3"
+        and item.media[0].bitrate < 320
+        or item.media[0].audioCodec == "aac"
+        and item.media[0].bitrate < 320
+        or item.media[0].audioCodec == "m4a"
+        and item.media[0].bitrate < 256
     )
 
 
@@ -257,11 +259,11 @@ def get_resources(account: MyPlexAccount) -> list[MyPlexResource]:
 
 
 def upgrade_playlist(
-        server: PlexServer,
-        playlist: Playlist,
-        duplicate: bool = False,
-        simple_mode: bool = False,
-        dry: bool = False
+    server: PlexServer,
+    playlist: Playlist,
+    duplicate: bool = False,
+    simple_mode: bool = False,
+    dry: bool = False,
 ) -> Playlist:
     """
     Function: upgrade_playlist()
@@ -306,6 +308,7 @@ def upgrade_playlist(
 
     items_to_remove = []
     items_to_add = []
+    items_ommited = []
 
     print()
 
@@ -314,7 +317,7 @@ def upgrade_playlist(
         if not check_quality_requirements(item):
             print(
                 f"❌ {item.originalTitle or item.grandparentTitle} - {item.title} "
-                f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}] must be upgraded."
+                f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}] must be upgraded.",
             )
 
             # Search for the same track in your library
@@ -325,9 +328,14 @@ def upgrade_playlist(
             )
 
             # Sort the search results by bitrate
-            replacements = [r for r in sorted(search_results, key=lambda d: d.media[0].bitrate, reverse=True) if r.media[0].bitrate > item.media[0].bitrate]
+            replacements = [
+                r
+                for r in sorted(search_results, key=lambda d: d.media[0].bitrate, reverse=True)
+                if r.media[0].bitrate > item.media[0].bitrate
+            ]
 
             if not len(replacements):
+                items_ommited.append(item)
                 print("❔ No potential replacement tracks found. Track will be kept as is in the playlist.")
                 continue
 
@@ -339,7 +347,7 @@ def upgrade_playlist(
                 replacement = replacements[0]
                 print(
                     f"🆕 {replacement.originalTitle or replacement.grandparentTitle} - {replacement.title} "
-                    f"({replacement.album().title}) [{replacement.media[0].audioCodec}] [{replacement.media[0].bitrate}] will be used instead."
+                    f"({replacement.album().title}) [{replacement.media[0].audioCodec}] [{replacement.media[0].bitrate}] will be used instead.",
                 )
 
                 # Add the tracks to separate lists for future usage
@@ -356,14 +364,14 @@ def upgrade_playlist(
                 for index, choice in enumerate(replacements):
                     print(
                         f"  {index}: {choice.originalTitle or choice.grandparentTitle} - {choice.title} "
-                        f"({choice.album().title}) [{choice.media[0].audioCodec}] [{choice.media[0].bitrate}]"
+                        f"({choice.album().title}) [{choice.media[0].audioCodec}] [{choice.media[0].bitrate}]",
                     )
                 print()
 
                 while True:
                     try:
                         # Get user choice
-                        index = input(f"Select replacement track (No input so as not to make any changes): ")
+                        index = input("Select replacement track (No input so as not to make any changes): ")
 
                         # Add the tracks to separate lists for future usage
                         if index:
@@ -374,7 +382,7 @@ def upgrade_playlist(
 
                             print(
                                 f"🆕 {replacement.originalTitle or replacement.grandparentTitle} - {replacement.title} "
-                                f"({replacement.album().title}) [{replacement.media[0].audioCodec}] [{replacement.media[0].bitrate}] will be used instead."
+                                f"({replacement.album().title}) [{replacement.media[0].audioCodec}] [{replacement.media[0].bitrate}] will be used instead.",
                             )
 
                         break
@@ -383,13 +391,17 @@ def upgrade_playlist(
 
             # Check if similar tracks have been found
             if not replacement_candidate:
+                items_ommited.append(item)
+
                 if simple_mode:
                     print("❔ No replacement track found. Track will be kept as is in the playlist.")
                 else:
                     print("❔ No replacement track selected. Track will be kept as is in the playlist.")
-            
+
         else:
-            print(f"✅ {item.originalTitle or item.grandparentTitle} - {item.title} [{item.media[0].audioCodec}] [{item.media[0].bitrate}]")
+            print(
+                f"✅ {item.originalTitle or item.grandparentTitle} - {item.title} [{item.media[0].audioCodec}] [{item.media[0].bitrate}]",
+            )
 
     print()
 
@@ -402,7 +414,7 @@ def upgrade_playlist(
             for item in items_to_remove:
                 print(
                     f"❌ {item.originalTitle or item.grandparentTitle} - {item.title} "
-                    f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}]"
+                    f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}]",
                 )
             print()
 
@@ -413,7 +425,17 @@ def upgrade_playlist(
             for item in items_to_add:
                 print(
                     f"🆕 {item.originalTitle or item.grandparentTitle} - {item.title} "
-                    f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}]"
+                    f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}]",
+                )
+            print()
+
+        # List all items which couldn't be upgraded
+        if len(items_ommited):
+            print("The following tracks couldn't be upgraded:")
+            for item in items_ommited:
+                print(
+                    f"❔ {item.originalTitle or item.grandparentTitle} - {item.title} "
+                    f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}]",
                 )
             print()
 
@@ -422,7 +444,7 @@ def upgrade_playlist(
     return playlist
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Load configuration
     config = get_config()
 
