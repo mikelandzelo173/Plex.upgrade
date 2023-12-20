@@ -327,12 +327,17 @@ def upgrade_playlist(
                 libtype="track",
             )
 
-            # Sort the search results by bitrate
-            replacements = [
-                r
-                for r in sorted(search_results, key=lambda d: d.media[0].bitrate, reverse=True)
-                if r.media[0].bitrate > item.media[0].bitrate
-            ]
+            # Remove all tracks with lower quality
+            replacements = [r for r in search_results if r.media[0].bitrate > item.media[0].bitrate]
+
+            # Sort the search results by bitrate and artist
+            replacements = sorted(
+                replacements,
+                key=lambda x: getattr(x, "originalTitle")
+                if getattr(x, "originalTitle") is not None
+                else getattr(x, "grandparentTitle"),
+            )
+            replacements = sorted(replacements, key=lambda x: x.media[0].bitrate, reverse=True)
 
             if not len(replacements):
                 items_ommited.append(item)
