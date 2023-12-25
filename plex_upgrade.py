@@ -35,6 +35,7 @@ https://python-plexapi.readthedocs.io/en/latest/index.html
 import os
 import random
 import re
+import subprocess
 import sys
 from getpass import getpass
 
@@ -139,6 +140,31 @@ def choose_simple_replacement_mode() -> bool:
         if simple_mode.lower() == "y":
             return True
         elif not simple_mode or simple_mode.lower() == "n":
+            return False
+
+
+def choose_spotdl_download() -> bool:
+    """
+    Function: choose_spotdl_download()
+
+    Decide on wheter tracks which could not be upgraded should be downloaded via spotdl.
+    Project and source code: https://github.com/spotDL/spotify-downloader
+    Documentation for your custom configuration file: https://spotdl.readthedocs.io/en/latest/usage/#config-file
+
+    :returns: A boolean
+    :rtype: bool
+    """
+
+    print()
+
+    while True:
+        spotdl_download = input(
+            "Do you want to download tracks that could not be upgraded within your library with spotdl? [yN]",
+        )
+
+        if spotdl_download.lower() == "y":
+            return True
+        elif not spotdl_download or spotdl_download.lower() == "n":
             return False
 
 
@@ -445,6 +471,23 @@ def upgrade_playlist(
             print()
 
         print(f"Successfully upgraded playlist {playlist.title}.")
+
+        # Download tracks that couldn't be upgraded with spotdl
+        if choose_spotdl_download():
+            script_path = os.path.dirname(os.path.abspath(__file__))
+
+            subprocess.run(["pip", "install", "spotdl", "--upgrade"])
+            os.makedirs("spotdl", exist_ok=True)
+            os.chdir(os.path.join(script_path, "spotdl"))
+
+            print()
+            for item in items_ommited:
+                print(f"Searching for {item.originalTitle or item.grandparentTitle} - {item.title}")
+                subprocess.run(["spotdl", "download", f"{item.originalTitle or item.grandparentTitle} - {item.title}"])
+
+            os.chdir(script_path)
+
+            print("Done downloading tracks.")
 
     return playlist
 
