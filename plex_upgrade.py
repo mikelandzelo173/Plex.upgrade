@@ -57,6 +57,23 @@ __email__ = "git@michaelpoelzl.at"
 __status__ = "Production"
 
 
+def duration_to_str(duration: int) -> str:
+    """
+    Function: duration_to_str()
+
+    Converts a duration value in milliseconds to a usual string represantation for audio length.
+
+    :param duration: Duration in milliseconds
+    :type duration: int
+    :returns: String represantation of duration
+    :rtype: str
+    """
+
+    seconds, milliseconds = divmod(duration, 1000)
+    minutes, seconds = divmod(seconds, 60)
+    return f"{minutes:02d}:{seconds:02d}"
+
+
 def choose_continue() -> bool:
     """
     Function: choose_continue()
@@ -308,7 +325,8 @@ def upgrade_playlist(
     :type duplicate: bool
     :param simple_mode: Whether you want to enable the simple replacement mode
     :type simple_mode: bool
-    :param dry: Whether you want to perform a dry run and only check what would be replaced instead of actually modifying anything
+    :param dry: Whether you want to perform a dry run and only check what would be replaced instead of actually
+                modifying anything
     :type dry: bool
     :returns: A Playlist object, either the modified or a newly created one
     :rtype: Playlist
@@ -343,7 +361,8 @@ def upgrade_playlist(
         if not check_quality_requirements(item):
             print(
                 f"❌ {item.originalTitle or item.grandparentTitle} - {item.title} "
-                f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}] must be upgraded.",
+                f"({item.album().title}) [{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}]"
+                f"[{item.media[0].bitrate}] must be upgraded.",
             )
 
             # Search for the same track in your library
@@ -378,7 +397,8 @@ def upgrade_playlist(
                 replacement = replacements[0]
                 print(
                     f"🆕 {replacement.originalTitle or replacement.grandparentTitle} - {replacement.title} "
-                    f"({replacement.album().title}) [{replacement.media[0].audioCodec}] [{replacement.media[0].bitrate}] will be used instead.",
+                    f"({replacement.album().title}) [{duration_to_str(replacement.media[0].duration)}]"
+                    f"[{replacement.media[0].audioCodec}][{replacement.media[0].bitrate}] will be used instead.",
                 )
 
                 # Add the tracks to separate lists for future usage
@@ -395,7 +415,8 @@ def upgrade_playlist(
                 for index, choice in enumerate(replacements):
                     print(
                         f"  {index}: {choice.originalTitle or choice.grandparentTitle} - {choice.title} "
-                        f"({choice.album().title}) [{choice.media[0].audioCodec}] [{choice.media[0].bitrate}]",
+                        f"({choice.album().title}) [{duration_to_str(choice.media[0].duration)}]"
+                        f"[{choice.media[0].audioCodec}][{choice.media[0].bitrate}]",
                     )
                 print()
 
@@ -413,7 +434,9 @@ def upgrade_playlist(
 
                             print(
                                 f"🆕 {replacement.originalTitle or replacement.grandparentTitle} - {replacement.title} "
-                                f"({replacement.album().title}) [{replacement.media[0].audioCodec}] [{replacement.media[0].bitrate}] will be used instead.",
+                                f"({replacement.album().title}) [{duration_to_str(replacement.media[0].duration)}]"
+                                f"[{replacement.media[0].audioCodec}][{replacement.media[0].bitrate}] "
+                                "will be used instead.",
                             )
 
                         break
@@ -431,7 +454,8 @@ def upgrade_playlist(
 
         else:
             print(
-                f"✅ {item.originalTitle or item.grandparentTitle} - {item.title} [{item.media[0].audioCodec}] [{item.media[0].bitrate}]",
+                f"✅ {item.originalTitle or item.grandparentTitle} - {item.title} "
+                f"[{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}][{item.media[0].bitrate}]",
             )
 
     print()
@@ -445,7 +469,8 @@ def upgrade_playlist(
             for item in items_to_remove:
                 print(
                     f"❌ {item.originalTitle or item.grandparentTitle} - {item.title} "
-                    f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}]",
+                    f"({item.album().title}) [{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}]"
+                    f"[{item.media[0].bitrate}]",
                 )
             print()
 
@@ -456,7 +481,8 @@ def upgrade_playlist(
             for item in items_to_add:
                 print(
                     f"🆕 {item.originalTitle or item.grandparentTitle} - {item.title} "
-                    f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}]",
+                    f"({item.album().title}) [{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}]"
+                    f"[{item.media[0].bitrate}]",
                 )
             print()
 
@@ -466,7 +492,8 @@ def upgrade_playlist(
             for item in items_ommited:
                 print(
                     f"❔ {item.originalTitle or item.grandparentTitle} - {item.title} "
-                    f"({item.album().title}) [{item.media[0].audioCodec}] [{item.media[0].bitrate}]",
+                    f"({item.album().title}) [{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}]"
+                    f"[{item.media[0].bitrate}]",
                 )
             print()
 
