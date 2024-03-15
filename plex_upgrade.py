@@ -51,7 +51,7 @@ __author__ = "Michael Pölzl"
 __copyright__ = "Copyright 2023, Michael Pölzl"
 __credits__ = ""
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.3.0"
 __maintainer__ = "Michael Pölzl"
 __email__ = "git@michaelpoelzl.at"
 __status__ = "Production"
@@ -61,17 +61,51 @@ def duration_to_str(duration: int) -> str:
     """
     Function: duration_to_str()
 
-    Converts a duration value in milliseconds to a usual string represantation for audio length.
+    Converts a duration value in milliseconds to a usual string representation for audio length.
 
     :param duration: Duration in milliseconds
     :type duration: int
-    :returns: String represantation of duration
+    :returns: String representation of duration
     :rtype: str
     """
 
     seconds, milliseconds = divmod(duration, 1000)
     minutes, seconds = divmod(seconds, 60)
     return f"{minutes:02d}:{seconds:02d}"
+
+
+def artist(item: Audio) -> str:
+    """
+    Function: artist()
+
+    Extracts the artist from an Audio object and returns the value as a human readable string representation.
+    If no artist is found the album artist will be used instead.
+
+    :param item: Audio object representing a track
+    :type item: Audio
+    :returns: String representation of the track artist
+    :rtype: str
+    """
+
+    return item.originalTitle or item.grandparentTitle
+
+
+def audio_to_str(item: Audio) -> str:
+    """
+    Function: audio_to_str()
+
+    Converts an Audio object to a human readable string representation.
+
+    :param item: Audio object representing a track
+    :type item: Audio
+    :returns: String representation of an Audio object
+    :rtype: str
+    """
+
+    return (
+        f"{artist(item)} - {item.title} ({item.album().title}) "
+        f"[{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}][{item.media[0].bitrate}]"
+    )
 
 
 def choose_continue() -> bool:
@@ -201,8 +235,6 @@ def check_quality_requirements(item: Audio) -> bool:
         item.media[0].audioCodec == "mp3"
         and item.media[0].bitrate < 320
         or item.media[0].audioCodec == "aac"
-        and item.media[0].bitrate < 320
-        or item.media[0].audioCodec == "m4a"
         and item.media[0].bitrate < 256
     )
 
@@ -312,10 +344,7 @@ def upgrade_playlist(
     Function: upgrade_playlist()
 
     Upgrades tracks in a playlist to a better version of the same track present in your library.
-    Tracks to be upgradeable are as follows:
-    - mp3 with a bitrate lower than 320
-    - aac with a bitrate lower than 320
-    - m4a with a bitrate lower than 256
+    Tracks to be upgradeable are as defined in check_quality_requirements().
 
     :param server: PlexServer object
     :type server: PlexServer
@@ -359,21 +388,20 @@ def upgrade_playlist(
     # Analyze all tracks in the playlist and check if they fail to meet the quality requirements
     for item in items:
         if not check_quality_requirements(item):
-            print(
-                f"❌ {item.originalTitle or item.grandparentTitle} - {item.title} "
-                f"({item.album().title}) [{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}]"
-                f"[{item.media[0].bitrate}] must be upgraded.",
-            )
+            print(f"❌ {audio_to_str(item)} must be upgraded.")
 
             # Search for the same track in your library
             search_results = server.library.search(
                 title=re.sub(r"[^\w\s]", "", item.title),
-                artist=re.sub(r"[^\w\s]", "", item.originalTitle or item.grandparentTitle),
+                artist=re.sub(r"[^\w\s]", "", artist(item)),
                 libtype="track",
             )
 
             # Remove all tracks with lower quality
             replacements = [r for r in search_results if r.media[0].bitrate > item.media[0].bitrate]
+
+            # Remove all tracks where there's a completely different artist
+            replacements = [r for r in replacements if artist(item).casefold() in artist(r).casefold()]
 
             # Sort the search results by bitrate and artist
             replacements = sorted(
@@ -386,7 +414,7 @@ def upgrade_playlist(
 
             if not len(replacements):
                 items_ommited.append(item)
-                print("❔ No potential replacement tracks found. Track will be kept as is in the playlist.")
+                print("❔ No potential replacement tracks found. No changes to the track will be made.")
                 continue
 
             replacement_candidate = False
@@ -395,11 +423,7 @@ def upgrade_playlist(
             if simple_mode:
                 # Automatically select the track with the highest bitrate as the replacement track
                 replacement = replacements[0]
-                print(
-                    f"🆕 {replacement.originalTitle or replacement.grandparentTitle} - {replacement.title} "
-                    f"({replacement.album().title}) [{duration_to_str(replacement.media[0].duration)}]"
-                    f"[{replacement.media[0].audioCodec}][{replacement.media[0].bitrate}] will be used instead.",
-                )
+                print(f"🆕 {audio_to_str(replacement)} will be used instead.")
 
                 # Add the tracks to separate lists for future usage
                 items_to_add.append(replacement)
@@ -413,11 +437,7 @@ def upgrade_playlist(
                 # List all tracks with higher bitrates
                 print()
                 for index, choice in enumerate(replacements):
-                    print(
-                        f"  {index}: {choice.originalTitle or choice.grandparentTitle} - {choice.title} "
-                        f"({choice.album().title}) [{duration_to_str(choice.media[0].duration)}]"
-                        f"[{choice.media[0].audioCodec}][{choice.media[0].bitrate}]",
-                    )
+                    print(f"  {index}: {audio_to_str(choice)}")
                 print()
 
                 while True:
@@ -432,12 +452,7 @@ def upgrade_playlist(
                             items_to_remove.append(item)
                             replacement_candidate = True
 
-                            print(
-                                f"🆕 {replacement.originalTitle or replacement.grandparentTitle} - {replacement.title} "
-                                f"({replacement.album().title}) [{duration_to_str(replacement.media[0].duration)}]"
-                                f"[{replacement.media[0].audioCodec}][{replacement.media[0].bitrate}] "
-                                "will be used instead.",
-                            )
+                            print(f"🆕 {audio_to_str(replacement)} will be used instead.")
 
                         break
                     except (ValueError, IndexError):
@@ -448,15 +463,12 @@ def upgrade_playlist(
                 items_ommited.append(item)
 
                 if simple_mode:
-                    print("❔ No replacement track found. Track will be kept as is in the playlist.")
+                    print("❔ No replacement track found. No changes to the track will be made.")
                 else:
-                    print("❔ No replacement track selected. Track will be kept as is in the playlist.")
+                    print("❔ No replacement track selected. No changes to the track will be made.")
 
         else:
-            print(
-                f"✅ {item.originalTitle or item.grandparentTitle} - {item.title} "
-                f"[{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}][{item.media[0].bitrate}]",
-            )
+            print(f"✅ {audio_to_str(item)}")
 
     print()
 
@@ -467,11 +479,7 @@ def upgrade_playlist(
             playlist.removeItems(items_to_remove)
             print("The following tracks were removed:")
             for item in items_to_remove:
-                print(
-                    f"❌ {item.originalTitle or item.grandparentTitle} - {item.title} "
-                    f"({item.album().title}) [{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}]"
-                    f"[{item.media[0].bitrate}]",
-                )
+                print(f"❌ {audio_to_str(item)}")
             print()
 
         # Add new items with better quality
@@ -479,22 +487,14 @@ def upgrade_playlist(
             playlist.addItems(items_to_add)
             print("The following tracks were added:")
             for item in items_to_add:
-                print(
-                    f"🆕 {item.originalTitle or item.grandparentTitle} - {item.title} "
-                    f"({item.album().title}) [{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}]"
-                    f"[{item.media[0].bitrate}]",
-                )
+                print(f"🆕 {audio_to_str(item)}")
             print()
 
         # List all items which couldn't be upgraded
         if len(items_ommited):
             print("The following tracks couldn't be upgraded:")
             for item in items_ommited:
-                print(
-                    f"❔ {item.originalTitle or item.grandparentTitle} - {item.title} "
-                    f"({item.album().title}) [{duration_to_str(item.media[0].duration)}][{item.media[0].audioCodec}]"
-                    f"[{item.media[0].bitrate}]",
-                )
+                print(f"❔ {audio_to_str(item)}")
             print()
 
         print(f"Successfully upgraded playlist {playlist.title}.")
@@ -509,8 +509,8 @@ def upgrade_playlist(
 
             print()
             for item in items_ommited:
-                print(f"Searching for {item.originalTitle or item.grandparentTitle} - {item.title}")
-                subprocess.run(["spotdl", "download", f"{item.originalTitle or item.grandparentTitle} - {item.title}"])
+                print(f"Searching for {artist(item)} - {item.title}")
+                subprocess.run(["spotdl", "download", f"{artist(item)} - {item.title}"])
 
             os.chdir(script_path)
 
