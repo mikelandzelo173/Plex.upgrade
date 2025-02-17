@@ -51,7 +51,7 @@ __author__ = "Michael Pölzl"
 __copyright__ = "Copyright 2023, Michael Pölzl"
 __credits__ = ""
 __license__ = "GPL"
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 __maintainer__ = "Michael Pölzl"
 __email__ = "git@michaelpoelzl.at"
 __status__ = "Production"
@@ -231,6 +231,15 @@ def check_quality_requirements(item: Audio) -> bool:
     :rtype: bool
     """
 
+    if bool(config.get("upgrade.force_all")):
+        return False
+
+    if bool(config.get("upgrade.force_lossless")):
+        return item.media[0].audioCodec in [
+            "alac",
+            "flac",
+        ]
+
     return not (
         item.media[0].audioCodec == "mp3"
         and item.media[0].bitrate < 320
@@ -334,6 +343,7 @@ def get_resources(account: MyPlexAccount) -> list[MyPlexResource]:
 
 
 def upgrade_playlist(
+    config: PlexConfig,
     server: PlexServer,
     playlist: Playlist,
     duplicate: bool = False,
@@ -346,6 +356,8 @@ def upgrade_playlist(
     Upgrades tracks in a playlist to a better version of the same track present in your library.
     Tracks to be upgradeable are as defined in check_quality_requirements().
 
+    :param config: PlexConfig object
+    :type config: PlexConfig
     :param server: PlexServer object
     :type server: PlexServer
     :param playlist: Playlist object
@@ -398,7 +410,7 @@ def upgrade_playlist(
             )
 
             # Remove all tracks with lower quality
-            replacements = [r for r in search_results if r.media[0].bitrate > item.media[0].bitrate]
+            replacements = [r for r in search_results if r.media[0].bitrate and r.media[0].bitrate > item.media[0].bitrate]
 
             # Remove all tracks where there's a completely different artist
             replacements = [r for r in replacements if artist(item).casefold() in artist(r).casefold()]
@@ -549,6 +561,7 @@ if __name__ == "__main__":
 
         # Upgrade playlist
         upgrade_playlist(
+            config=config,
             server=server,
             playlist=playlist,
             duplicate=duplicate,
