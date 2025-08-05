@@ -1,5 +1,8 @@
-Plex.upgrade
-============
+# Deprecation notice
+
+This repository is deprecated. You can still use it, but it will no longer receive updates. All features and more have been integrated into a new repository, which you can find here: https://github.com/mikelandzelo173/Plex.organize
+
+# Plex.upgrade
 
 Plex.upgrade is a simple script that lets you log into your Plex account and select a playlist to upgrade.
 
@@ -10,6 +13,7 @@ Currently, Python 3.7+ is supported.
 1. Make sure [pip](https://pip.pypa.io/en/stable/installation/) is installed on your machine.
 
 2. Create a virtual environment and activate it (optional), e.g.:
+
 ```bash
 pip install virtualenv
 python3 -m venv venv
@@ -17,11 +21,13 @@ source venv/bin/activate
 ```
 
 3. Install the packages from the `requirements.txt` file using pip:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 4. Execute the script and follow the guidance
+
 ```bash
 ./plex_upgrade.py
 ```
