@@ -53,7 +53,7 @@ __credits__ = ""
 __license__ = "GPL"
 __version__ = "1.4.0"
 __maintainer__ = "Michael Pölzl"
-__email__ = "git@michaelpoelzl.at"
+__email__ = "michael.poelzl@proton.me"
 __status__ = "Production"
 
 
